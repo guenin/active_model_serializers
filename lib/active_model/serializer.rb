@@ -353,7 +353,7 @@ module ActiveModel
     # object without the root.
     def serializable_hash
       if perform_caching?
-        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, 'serializable-hash']) do
+        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, 'serializable-hash', @options[:root]]) do
           _serializable_hash
         end
       else
