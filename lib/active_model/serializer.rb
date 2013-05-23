@@ -325,11 +325,7 @@ module ActiveModel
     end
 
     def to_json(*args)
-      if perform_caching?
-        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, 'to-json']) do
-          super
-        end
-      else
+      cached 'to-json' do
         super
       end
     end
@@ -341,11 +337,25 @@ module ActiveModel
         @options[:hash] = hash = {}
         @options[:unique_values] = {}
 
-        hash.merge!(root => serializable_hash)
-        include_meta hash
-        hash
+        cached 'as-json', root do
+          hash.merge!(root => serializable_hash)
+          include_meta hash
+          hash
+        end
       else
-        serializable_hash
+        cached 'as-json' do
+          serializable_hash
+        end
+      end
+    end
+
+    def cached(*keys)
+      if perform_caching?
+        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, keys]) do
+          yield
+        end
+      else
+        yield
       end
     end
 
@@ -448,16 +458,6 @@ module ActiveModel
     # Returns a hash representation of the serializable
     # object attributes.
     def attributes
-      if perform_caching?
-        cache.fetch expand_cache_key([self.class.to_s.underscore, cache_key, 'attributes']) do
-          _serializable_attributes
-        end
-      else
-        _serializable_attributes
-      end
-    end
-
-    def _serializable_attributes
       _fast_attributes
       rescue NameError
         method = "def _fast_attributes\n"
